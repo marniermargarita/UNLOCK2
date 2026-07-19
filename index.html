@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0907">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="preload" as="image" href="assets/page_common.webp" type="image/webp">
+  <title>UNLOCK Vol.2 | Answer Page</title>
+
+  <style>
+    :root {
+      --ink:#1a1108;
+      --correct:#2f6338;
+      --wrong:#7a2e28;
+      --page-scale:.6;
+      --keyboard-shift:0px;
+    }
+
+    * { box-sizing:border-box; }
+
+    html, body {
+      width:100%;
+      height:100%;
+      margin:0;
+      overflow:hidden;
+      background:#0b0907;
+      color:var(--ink);
+      font-family:"Yu Mincho","Hiragino Mincho ProN","YuMincho",Georgia,serif;
+      overscroll-behavior:none;
+      -webkit-text-size-adjust:100%;
+      touch-action:manipulation;
+    }
+
+    body {
+      position:relative;
+      padding:env(safe-area-inset-top) env(safe-area-inset-right)
+              env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    button, input { font:inherit; -webkit-tap-highlight-color:transparent; }
+
+    .book {
+      position:absolute;
+      left:50%;
+      top:calc(50% + var(--keyboard-shift));
+      width:900px;
+      height:1350px;
+      transform:translate(-50%,-50%) scale(var(--page-scale));
+      transform-origin:center;
+      transition:top .18s ease;
+      will-change:transform,top;
+      perspective:1800px;
+    }
+
+    .page {
+      position:absolute;
+      inset:0;
+      overflow:hidden;
+      background:url("assets/page_common.webp") center/100% 100% no-repeat;
+      box-shadow:0 24px 70px rgba(0,0,0,.72);
+      opacity:0;
+      pointer-events:none;
+      transform:translateX(34px) rotateY(-2deg);
+      transition:opacity .42s ease, transform .42s ease;
+    }
+
+    .page.active {
+      opacity:1;
+      pointer-events:auto;
+      transform:translateX(0) rotateY(0);
+      z-index:2;
+    }
+
+    .content {
+      position:absolute;
+      inset:0;
+      padding:300px 92px 170px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+    }
+
+    .kicker {
+      margin:0 0 18px;
+      font-family:Rockwell,Georgia,serif;
+      font-size:15px;
+      font-weight:900;
+      letter-spacing:.32em;
+      opacity:.68;
+    }
+
+    .question {
+      margin:0;
+      font-size:34px;
+      line-height:1.5;
+      letter-spacing:.07em;
+      font-weight:700;
+    }
+
+    .lead {
+      width:650px;
+      margin:0;
+      font-size:27px;
+      line-height:1.85;
+      letter-spacing:.045em;
+      font-weight:700;
+    }
+
+    .ornament {
+      display:flex;
+      align-items:center;
+      width:540px;
+      gap:14px;
+      margin:30px 0 48px;
+      opacity:.9;
+    }
+    .ornament::before,.ornament::after {
+      content:"";
+      flex:1;
+      height:1px;
+      background:linear-gradient(to right,transparent,rgba(31,22,12,.78));
+    }
+    .ornament::after { background:linear-gradient(to left,transparent,rgba(31,22,12,.78)); }
+
+    .answer-note {
+      margin:0 0 16px;
+      color:rgba(42,27,12,.84);
+      font-size:18px;
+      font-weight:700;
+      letter-spacing:.08em;
+    }
+
+    .answer-wrap {
+      position:relative;
+      width:520px;
+      height:78px;
+      cursor:text;
+    }
+
+    .answer-input {
+      position:absolute;
+      inset:0;
+      z-index:3;
+      width:100%;
+      height:100%;
+      border:0;
+      outline:0;
+      opacity:.01;
+      color:transparent;
+      caret-color:transparent;
+      background:transparent;
+      font-size:16px;
+      -webkit-appearance:none;
+      appearance:none;
+    }
+
+    .answer-box {
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      padding:0 24px;
+      border:2px solid rgba(29,20,11,.92);
+      background:rgba(205,164,96,.13);
+      color:#17100a;
+      font-size:42px;
+      font-weight:800;
+      letter-spacing:.16em;
+      line-height:1;
+      box-shadow:inset 0 0 12px rgba(255,230,172,.06);
+      pointer-events:none;
+    }
+
+    .answer-wrap:focus-within .answer-box {
+      border-color:#5d3b19;
+      background:rgba(238,204,143,.30);
+      box-shadow:0 0 0 3px rgba(55,34,14,.16), inset 0 0 18px rgba(255,229,171,.14);
+    }
+
+    .answer-wrap.solved .answer-box {
+      border-color:#355a38;
+      background:rgba(102,145,96,.18);
+    }
+
+    .letter-row {
+      display:flex;
+      justify-content:center;
+      gap:9px;
+      margin:0 0 35px;
+    }
+
+    .letter-cell {
+      width:54px;
+      height:62px;
+      display:grid;
+      place-items:center;
+      border:2px solid rgba(29,20,11,.72);
+      background:rgba(205,164,96,.10);
+      font-size:28px;
+      font-weight:800;
+    }
+
+    .number-slots {
+      display:flex;
+      justify-content:center;
+      gap:14px;
+      margin-bottom:6px;
+    }
+
+    .number-slot {
+      width:72px;
+      height:82px;
+      display:grid;
+      place-items:center;
+      border:2px solid rgba(29,20,11,.92);
+      background:rgba(205,164,96,.13);
+      color:#17100a;
+      font-family:Rockwell,Georgia,serif;
+      font-size:45px;
+      font-weight:900;
+      line-height:1;
+      box-shadow:inset 0 0 12px rgba(255,230,172,.06);
+    }
+
+    .answer-wrap.numeric {
+      width:430px;
+      height:82px;
+    }
+    .answer-wrap.numeric .answer-box { display:none; }
+    .answer-wrap.numeric:focus-within .number-slot {
+      border-color:#5d3b19;
+      background:rgba(238,204,143,.30);
+    }
+    .answer-wrap.numeric.solved .number-slot {
+      border-color:#355a38;
+      background:rgba(102,145,96,.18);
+    }
+
+    .actions {
+      display:flex;
+      justify-content:center;
+      gap:18px;
+      margin-top:34px;
+    }
+
+    .metal-btn,.paper-btn {
+      position:relative;
+      min-width:145px;
+      padding:15px 19px;
+      border-radius:2px;
+      font-family:Rockwell,Georgia,serif;
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:.16em;
+      cursor:pointer;
+      user-select:none;
+      -webkit-user-select:none;
+    }
+
+    .metal-btn {
+      border:2px solid #090705;
+      color:#e4c991;
+      background:linear-gradient(#554a39,#1d1812 58%,#090806);
+      box-shadow:inset 0 0 0 2px rgba(181,138,70,.14),0 4px 0 rgba(51,32,15,.55);
+    }
+
+    .paper-btn {
+      border:2px solid #3d2b17;
+      color:#24170b;
+      background:linear-gradient(rgba(255,255,255,.12),rgba(80,48,18,.07)),#b98d4f;
+      box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),0 3px 0 rgba(51,32,15,.42);
+    }
+
+    .metal-btn:not(:disabled):active,.paper-btn:not(:disabled):active { transform:translateY(2px); }
+    .metal-btn:disabled { cursor:default; opacity:.62; }
+
+    .result {
+      min-height:24px;
+      margin-top:18px;
+      font-family:Arial,sans-serif;
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:.16em;
+    }
+    .correct { color:var(--correct); }
+    .wrong { color:var(--wrong); }
+
+    .next-btn {
+      position:absolute;
+      left:50%;
+      bottom:145px;
+      min-width:210px;
+      padding:16px 30px;
+      transform:translateX(-50%);
+      opacity:0;
+      pointer-events:none;
+    }
+    .next-btn.show { opacity:1; pointer-events:auto; animation:reveal .55s ease both,pulse 1.8s ease-in-out .55s infinite; }
+
+    @keyframes reveal {
+      from { opacity:0; transform:translateX(-50%) translateY(12px); }
+      to { opacity:1; transform:translateX(-50%) translateY(0); }
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow:inset 0 0 0 2px rgba(181,138,70,.14),0 4px 0 rgba(51,32,15,.55); }
+      50% { box-shadow:inset 0 0 0 2px rgba(225,182,91,.25),0 4px 0 rgba(51,32,15,.55),0 0 22px rgba(214,167,75,.38); }
+    }
+
+    .video-content { padding:270px 75px 160px; }
+    .video-frame {
+      width:690px;
+      aspect-ratio:16/9;
+      position:relative;
+      overflow:hidden;
+      border:4px solid #21160d;
+      background:#090806;
+      box-shadow:inset 0 0 0 2px rgba(192,146,75,.25),0 16px 42px rgba(0,0,0,.35);
+    }
+    .video-frame video { width:100%; height:100%; object-fit:cover; display:block; }
+    .video-placeholder {
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-content:center;
+      gap:18px;
+      color:#dcc18a;
+      background:
+        radial-gradient(circle at center,rgba(121,84,37,.22),transparent 58%),
+        repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 4px),
+        #0b0907;
+      font-family:Rockwell,Georgia,serif;
+      letter-spacing:.13em;
+    }
+    .video-placeholder strong { font-size:28px; }
+    .video-placeholder span { font-size:15px; opacity:.76; }
+    .video-note { width:690px; margin:24px 0 0; font-size:19px; line-height:1.7; font-weight:700; }
+
+    .start-overlay {
+      position:absolute;
+      inset:0;
+      z-index:20;
+      display:grid;
+      place-content:center;
+      justify-items:center;
+      gap:18px;
+      background:rgba(19,12,6,.48);
+      backdrop-filter:blur(2px);
+      transition:opacity .35s ease;
+    }
+    .start-overlay.hide { opacity:0; pointer-events:none; }
+    .start-button { min-width:270px; padding:20px 32px; font-size:20px; }
+
+    .hint-modal[hidden] { display:none; }
+    .hint-modal {
+      position:fixed;
+      inset:0;
+      z-index:9999;
+      display:grid;
+      place-items:center;
+      padding:18px;
+    }
+    .hint-backdrop { position:absolute; inset:0; background:rgba(5,4,3,.76); backdrop-filter:blur(3px); }
+    .hint-dialog {
+      position:relative;
+      z-index:1;
+      width:min(560px,calc(100vw - 28px));
+      padding:34px 32px 30px;
+      border:3px solid #24170d;
+      border-radius:5px;
+      color:#211408;
+      background:radial-gradient(circle at 50% 10%,rgba(255,244,204,.24),transparent 38%),#cba15f;
+      box-shadow:inset 0 0 34px rgba(67,38,14,.35),0 24px 70px rgba(0,0,0,.65);
+    }
+    .hint-close {
+      position:absolute;
+      top:11px;
+      right:13px;
+      width:36px;
+      height:36px;
+      border:1px solid #25170b;
+      border-radius:50%;
+      color:#ead3a4;
+      background:#241a11;
+      font-size:25px;
+      cursor:pointer;
+    }
+    .hint-kicker { margin:0 0 8px; font-family:Rockwell,Georgia,serif; font-size:12px; font-weight:900; letter-spacing:.25em; opacity:.65; }
+    .hint-title { margin:0 40px 24px 0; font-size:28px; }
+    .hint-detail { margin-top:14px; border:1px solid rgba(45,29,13,.74); background:rgba(231,198,136,.22); }
+    .hint-detail summary { position:relative; padding:15px 45px 15px 18px; font-size:17px; font-weight:700; cursor:pointer; list-style:none; }
+    .hint-detail summary::-webkit-details-marker { display:none; }
+    .hint-detail summary::after { content:"＋"; position:absolute; right:17px; }
+    .hint-detail[open] summary::after { content:"−"; }
+    .hint-content { padding:14px 18px 18px; border-top:1px solid rgba(45,29,13,.28); font-size:16px; line-height:1.75; }
+
+    @media (max-width:600px) {
+      .question { font-size:39px; }
+      .lead { font-size:29px; }
+      .answer-note { font-size:21px; }
+      .answer-box { font-size:48px; }
+      .metal-btn,.paper-btn { min-width:158px; padding-top:18px; padding-bottom:18px; font-size:16px; }
+      .start-button { min-width:320px; padding:23px 36px; font-size:23px; }
+      .hint-title { font-size:31px; }
+      .hint-content,.hint-detail summary { font-size:18px; }
+      .video-note { font-size:22px; }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      *,*::before,*::after { animation:none!important; transition:none!important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="book" id="book">
+    <!-- PAGE 1: 到着 -->
+    <section class="page active" id="pageArrival">
+      <main class="content">
+        <p class="kicker">UNLOCK Vol.2</p>
+        <h1 class="question">別荘に着くための言葉を導け</h1>
+        <div class="ornament" aria-hidden="true"><span>✦</span></div>
+        <p class="answer-note">答えを入力してください</p>
+        <div class="answer-wrap" id="arrivalWrap">
+          <input class="answer-input" id="arrivalInput" type="text" inputmode="text" maxlength="4"
+                 autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                 enterkeyhint="done" aria-label="別荘に着くための言葉">
+          <div class="answer-box" id="arrivalBox" aria-hidden="true"></div>
+        </div>
+        <div class="actions">
+          <button class="metal-btn" id="arrivalCheck" type="button">CHECK</button>
+          <button class="paper-btn" data-hint="arrival" type="button">HINT</button>
+        </div>
+        <div class="result" id="arrivalResult" aria-live="polite"></div>
+      </main>
+      <button class="metal-btn next-btn" id="toVideo" type="button">NEXT</button>
+      <div class="start-overlay" id="startOverlay">
+        <button class="metal-btn start-button" id="startButton" type="button">TAP TO START</button>
+      </div>
+    </section>
+
+    <!-- PAGE 2: 動画差し込み用 -->
+    <section class="page" id="pageVideo">
+      <main class="content video-content">
+        <p class="kicker">UNLOCK Vol.2</p>
+        <h1 class="question">別荘へ到着した</h1>
+        <div class="ornament" aria-hidden="true"><span>✦</span></div>
+
+        <div class="video-frame">
+          <!-- 後から動画を入れる場合は、下のコメントを外して src を変更してください。 -->
+          <!-- <video id="storyVideo" src="assets/arrival.mp4" playsinline controls></video> -->
+          <div class="video-placeholder" id="videoPlaceholder">
+            <strong>VIDEO AREA</strong>
+            <span>ここに到着後の動画を差し込みます</span>
+          </div>
+        </div>
+        <p class="video-note">ポストの中に、一枚のメモが入っていた。</p>
+        <div class="actions">
+          <button class="metal-btn" id="toDoorPuzzle" type="button">NEXT</button>
+        </div>
+      </main>
+    </section>
+
+    <!-- PAGE 3: 入口の鍵 -->
+    <section class="page" id="pageDoor">
+      <main class="content" style="padding-top:265px;">
+        <p class="kicker">UNLOCK Vol.2</p>
+        <h1 class="lead">入口の鍵は言葉の中にある。<br>さあ、記憶の扉を開けよう。</h1>
+        <div class="ornament" aria-hidden="true"><span>✦</span></div>
+
+        <div class="letter-row" aria-label="9文字の言葉">
+          <span class="letter-cell"></span><span class="letter-cell"></span><span class="letter-cell"></span>
+          <span class="letter-cell"></span><span class="letter-cell"></span><span class="letter-cell"></span>
+          <span class="letter-cell"></span><span class="letter-cell"></span><span class="letter-cell"></span>
+        </div>
+
+        <p class="answer-note">扉を開ける数字は</p>
+        <div class="answer-wrap numeric" id="doorWrap">
+          <input class="answer-input" id="doorInput" type="text" inputmode="numeric" pattern="[0-9]*"
+                 maxlength="5" autocomplete="off" autocorrect="off" spellcheck="false"
+                 enterkeyhint="done" aria-label="扉を開ける5桁の数字">
+          <div class="number-slots" aria-hidden="true">
+            <span class="number-slot"></span><span class="number-slot"></span><span class="number-slot"></span>
+            <span class="number-slot"></span><span class="number-slot"></span>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="metal-btn" id="doorCheck" type="button">CHECK</button>
+          <button class="paper-btn" data-hint="door" type="button">HINT</button>
+        </div>
+        <div class="result" id="doorResult" aria-live="polite"></div>
+      </main>
+      <button class="metal-btn next-btn" id="doorNext" type="button">NEXT</button>
+    </section>
+
+    <!-- PAGE 4: 入口を開けた後の動画差し込み用 -->
+    <section class="page" id="pageDoorVideo">
+      <main class="content video-content">
+        <p class="kicker">UNLOCK Vol.2</p>
+        <h1 class="question">記憶の扉が開いた</h1>
+        <div class="ornament" aria-hidden="true"><span>✦</span></div>
+
+        <div class="video-frame">
+          <!-- 後から動画を入れる場合は、下のコメントを外して src を変更してください。 -->
+          <!-- <video id="doorStoryVideo" src="assets/door_open.mp4" playsinline controls></video> -->
+          <div class="video-placeholder">
+            <strong>VIDEO AREA</strong>
+            <span>ここに入口を開けた後の動画を差し込みます</span>
+          </div>
+        </div>
+        <p class="video-note">扉の先には、懐かしい別荘のホールが広がっていた。</p>
+        <div class="actions">
+          <button class="metal-btn" id="toPaintingPuzzle" type="button">NEXT</button>
+        </div>
+      </main>
+    </section>
+
+    <!-- PAGE 5: 絵画の前に立って -->
+    <section class="page" id="pagePainting">
+      <main class="content">
+        <p class="kicker">UNLOCK Vol.2</p>
+        <h1 class="question">○○○の前に立って。</h1>
+        <div class="ornament" aria-hidden="true"><span>✦</span></div>
+        <p class="answer-note">答えはひらがなで入力してください</p>
+
+        <div class="answer-wrap" id="paintingWrap">
+          <input class="answer-input" id="paintingInput" type="text" inputmode="text" maxlength="3"
+                 autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                 enterkeyhint="done" aria-label="立つ場所をひらがなで入力">
+          <div class="answer-box" id="paintingBox" aria-hidden="true"></div>
+        </div>
+
+        <div class="actions">
+          <button class="metal-btn" id="paintingCheck" type="button">CHECK</button>
+          <button class="paper-btn" data-hint="painting" type="button">HINT</button>
+        </div>
+        <div class="result" id="paintingResult" aria-live="polite"></div>
+      </main>
+      <button class="metal-btn next-btn" id="paintingNext" type="button">NEXT</button>
+    </section>
+  </div>
+
+  <div class="hint-modal" id="hintModal" hidden>
+    <div class="hint-backdrop" data-close-hint></div>
+    <section class="hint-dialog" role="dialog" aria-modal="true" aria-labelledby="hintTitle">
+      <button class="hint-close" id="hintClose" type="button" aria-label="閉じる">×</button>
+      <p class="hint-kicker">UNLOCK HINT</p>
+      <h2 class="hint-title" id="hintTitle"></h2>
+      <div id="hintContents"></div>
+    </section>
+  </div>
+
+  <script>
+    const ARRIVAL_ANSWERS = ["到着", "とうちゃく"];
+    const DOOR_ANSWER = "15410";
+    const PAINTING_ANSWER = "かいが";
+    const $ = selector => document.querySelector(selector);
+
+    const pages = [...document.querySelectorAll(".page")];
+    const answerInputs = [...document.querySelectorAll(".answer-input")];
+    let composing = false;
+    let stableWidth = 0;
+    let stableHeight = 0;
+
+    function showPage(id) {
+      pages.forEach(page => page.classList.toggle("active", page.id === id));
+      document.documentElement.style.setProperty("--keyboard-shift", "0px");
+      const activeInput = document.querySelector(`#${id} .answer-input:not(:disabled)`);
+      if (activeInput) setTimeout(() => activeInput.focus({ preventScroll:true }), 480);
+    }
+
+    function normalizeJapanese(value) {
+      return value.normalize("NFKC").replace(/\s+/g, "").slice(0, 4);
+    }
+
+    function normalizeNumber(value) {
+      return value.normalize("NFKC").replace(/\D/g, "").slice(0, 5);
+    }
+
+    function clearResult(element) {
+      element.textContent = "";
+      element.className = "result";
+    }
+
+    // 到着入力
+    const arrivalInput = $("#arrivalInput");
+    const arrivalBox = $("#arrivalBox");
+    const arrivalWrap = $("#arrivalWrap");
+    const arrivalCheck = $("#arrivalCheck");
+    const arrivalResult = $("#arrivalResult");
+    const toVideo = $("#toVideo");
+
+    function commitArrival(value = arrivalInput.value) {
+      arrivalInput.value = normalizeJapanese(value);
+      arrivalBox.textContent = arrivalInput.value;
+      clearResult(arrivalResult);
+    }
+
+    arrivalInput.addEventListener("compositionstart", () => composing = true);
+    arrivalInput.addEventListener("compositionupdate", event => {
+      arrivalBox.textContent = normalizeJapanese(event.data || arrivalInput.value);
+      clearResult(arrivalResult);
+    });
+    arrivalInput.addEventListener("compositionend", () => {
+      composing = false;
+      commitArrival();
+    });
+    arrivalInput.addEventListener("input", event => {
+      if (!composing && !event.isComposing) commitArrival();
+    });
+    arrivalInput.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !composing) {
+        event.preventDefault();
+        arrivalCheck.click();
+      }
+    });
+    arrivalWrap.addEventListener("click", () => !arrivalInput.disabled && arrivalInput.focus({ preventScroll:true }));
+
+    arrivalCheck.addEventListener("click", () => {
+      if (composing) return;
+      commitArrival();
+      const answer = arrivalInput.value;
+      if (!answer) {
+        arrivalResult.textContent = "PLEASE ENTER YOUR ANSWER";
+        arrivalResult.classList.add("wrong");
+        arrivalInput.focus({ preventScroll:true });
+      } else if (ARRIVAL_ANSWERS.includes(answer)) {
+        arrivalResult.textContent = "CORRECT";
+        arrivalResult.classList.add("correct");
+        arrivalWrap.classList.add("solved");
+        arrivalInput.disabled = true;
+        arrivalCheck.disabled = true;
+        arrivalCheck.textContent = "UNLOCKED";
+        toVideo.classList.add("show");
+      } else {
+        arrivalResult.textContent = "INCORRECT";
+        arrivalResult.classList.add("wrong");
+        arrivalInput.focus({ preventScroll:true });
+      }
+    });
+
+    toVideo.addEventListener("click", () => showPage("pageVideo"));
+    $("#toDoorPuzzle").addEventListener("click", () => showPage("pageDoor"));
+
+    // 5桁数字入力
+    const doorInput = $("#doorInput");
+    const doorWrap = $("#doorWrap");
+    const doorCheck = $("#doorCheck");
+    const doorResult = $("#doorResult");
+    const doorNext = $("#doorNext");
+    const numberSlots = [...document.querySelectorAll(".number-slot")];
+
+    function commitDoor() {
+      doorInput.value = normalizeNumber(doorInput.value);
+      numberSlots.forEach((slot, index) => slot.textContent = doorInput.value[index] || "");
+      clearResult(doorResult);
+    }
+
+    doorInput.addEventListener("input", commitDoor);
+    doorInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        doorCheck.click();
+      }
+    });
+    doorWrap.addEventListener("click", () => !doorInput.disabled && doorInput.focus({ preventScroll:true }));
+
+    doorCheck.addEventListener("click", () => {
+      commitDoor();
+      const answer = doorInput.value;
+      if (!answer) {
+        doorResult.textContent = "PLEASE ENTER YOUR ANSWER";
+        doorResult.classList.add("wrong");
+        doorInput.focus({ preventScroll:true });
+      } else if (answer === DOOR_ANSWER) {
+        doorResult.textContent = "CORRECT";
+        doorResult.classList.add("correct");
+        doorWrap.classList.add("solved");
+        doorInput.disabled = true;
+        doorCheck.disabled = true;
+        doorCheck.textContent = "UNLOCKED";
+        doorNext.classList.add("show");
+      } else {
+        doorResult.textContent = "INCORRECT";
+        doorResult.classList.add("wrong");
+        doorInput.focus({ preventScroll:true });
+      }
+    });
+
+    doorNext.addEventListener("click", () => showPage("pageDoorVideo"));
+    $("#toPaintingPuzzle").addEventListener("click", () => showPage("pagePainting"));
+
+    // 絵画入力
+    const paintingInput = $("#paintingInput");
+    const paintingBox = $("#paintingBox");
+    const paintingWrap = $("#paintingWrap");
+    const paintingCheck = $("#paintingCheck");
+    const paintingResult = $("#paintingResult");
+    const paintingNext = $("#paintingNext");
+
+    function normalizeHiragana(value) {
+      return value.normalize("NFKC").replace(/\s+/g, "").slice(0, 3);
+    }
+
+    function commitPainting(value = paintingInput.value) {
+      paintingInput.value = normalizeHiragana(value);
+      paintingBox.textContent = paintingInput.value;
+      clearResult(paintingResult);
+    }
+
+    paintingInput.addEventListener("compositionstart", () => composing = true);
+    paintingInput.addEventListener("compositionupdate", event => {
+      paintingBox.textContent = normalizeHiragana(event.data || paintingInput.value);
+      clearResult(paintingResult);
+    });
+    paintingInput.addEventListener("compositionend", () => {
+      composing = false;
+      commitPainting();
+    });
+    paintingInput.addEventListener("input", event => {
+      if (!composing && !event.isComposing) commitPainting();
+    });
+    paintingInput.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !composing) {
+        event.preventDefault();
+        paintingCheck.click();
+      }
+    });
+    paintingWrap.addEventListener("click", () => !paintingInput.disabled && paintingInput.focus({ preventScroll:true }));
+
+    paintingCheck.addEventListener("click", () => {
+      if (composing) return;
+      commitPainting();
+      const answer = paintingInput.value;
+      if (!answer) {
+        paintingResult.textContent = "PLEASE ENTER YOUR ANSWER";
+        paintingResult.classList.add("wrong");
+        paintingInput.focus({ preventScroll:true });
+      } else if (answer === PAINTING_ANSWER) {
+        paintingResult.textContent = "CORRECT";
+        paintingResult.classList.add("correct");
+        paintingWrap.classList.add("solved");
+        paintingInput.disabled = true;
+        paintingCheck.disabled = true;
+        paintingCheck.textContent = "UNLOCKED";
+        paintingNext.classList.add("show");
+      } else {
+        paintingResult.textContent = "INCORRECT";
+        paintingResult.classList.add("wrong");
+        paintingInput.focus({ preventScroll:true });
+      }
+    });
+
+    paintingNext.addEventListener("click", () => {
+      paintingNext.textContent = "TO BE CONTINUED";
+    });
+
+    // ヒント
+    const hintModal = $("#hintModal");
+    const hintTitle = $("#hintTitle");
+    const hintContents = $("#hintContents");
+    const hintClose = $("#hintClose");
+    let lastHintButton = null;
+
+    const HINTS = {
+      arrival: {
+        title:"別荘に着くための言葉を導け",
+        hints:[
+          "星から車まで、正しい道をたどってみよう。",
+          "道中に現れる文字を、通った順番に読んでみよう。"
+        ]
+      },
+      door: {
+        title:"入口の鍵は言葉の中にある",
+        hints:[
+          "ポストに書かれていた『君と語った夢は叶う』という言葉に注目しよう。",
+          "9文字の言葉の中から、入口の鍵になる5つの数字を探してみよう。"
+        ]
+      },
+      painting: {
+        title:"○○○の前に立って。",
+        hints:[
+          "別荘のホールにあるものを思い出してみよう。",
+          "壁に飾られているものを、ひらがな3文字で入力しよう。"
+        ]
+      }
+    };
+
+    document.querySelectorAll("[data-hint]").forEach(button => {
+      button.addEventListener("click", () => {
+        lastHintButton = button;
+        const data = HINTS[button.dataset.hint];
+        hintTitle.textContent = data.title;
+        hintContents.innerHTML = data.hints.map((text,index) => `
+          <details class="hint-detail">
+            <summary>ヒント${index + 1}</summary>
+            <div class="hint-content">${text}</div>
+          </details>`).join("");
+        hintModal.hidden = false;
+        hintClose.focus();
+      });
+    });
+
+    function closeHint() {
+      hintModal.hidden = true;
+      if (lastHintButton) lastHintButton.focus();
+    }
+    hintClose.addEventListener("click", closeHint);
+    hintModal.addEventListener("click", event => {
+      if (event.target.hasAttribute("data-close-hint")) closeHint();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !hintModal.hidden) closeHint();
+    });
+
+    // スタート
+    const startOverlay = $("#startOverlay");
+    $("#startButton").addEventListener("click", () => {
+      startOverlay.classList.add("hide");
+      setTimeout(() => {
+        startOverlay.hidden = true;
+        arrivalInput.focus({ preventScroll:true });
+      }, 380);
+    });
+
+    // 画面サイズ・スマホキーボード対応
+    function fitPage(force = false) {
+      const width = document.documentElement.clientWidth || window.innerWidth;
+      const height = window.innerHeight;
+      if (force || Math.abs(width - stableWidth) > 48 || !stableHeight) {
+        stableWidth = width;
+        stableHeight = height;
+      } else {
+        stableHeight = Math.max(stableHeight, height);
+      }
+      const scale = Math.min((stableWidth - 16) / 900, (stableHeight - 16) / 1350, 1);
+      document.documentElement.style.setProperty("--page-scale", String(Math.max(scale,.1)));
+    }
+
+    function adjustForKeyboard() {
+      const active = document.activeElement;
+      if (!answerInputs.includes(active)) {
+        document.documentElement.style.setProperty("--keyboard-shift", "0px");
+        return;
+      }
+      const viewport = window.visualViewport;
+      if (!viewport) return;
+      document.documentElement.style.setProperty("--keyboard-shift", "0px");
+      requestAnimationFrame(() => {
+        const wrap = active.closest(".answer-wrap");
+        const rect = wrap.getBoundingClientRect();
+        const visibleBottom = viewport.offsetTop + viewport.height - 24;
+        let shift = rect.bottom > visibleBottom ? visibleBottom - rect.bottom : 0;
+        shift = Math.max(-280, Math.min(0, shift));
+        document.documentElement.style.setProperty("--keyboard-shift", `${shift}px`);
+      });
+    }
+
+    window.addEventListener("resize", () => fitPage(false));
+    window.addEventListener("orientationchange", () => setTimeout(() => fitPage(true),120));
+    document.addEventListener("focusin", () => setTimeout(adjustForKeyboard,180));
+    document.addEventListener("focusout", () => setTimeout(() => {
+      document.documentElement.style.setProperty("--keyboard-shift", "0px");
+    },180));
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", adjustForKeyboard);
+      window.visualViewport.addEventListener("scroll", adjustForKeyboard);
+    }
+
+    fitPage(true);
+    requestAnimationFrame(() => fitPage(false));
+  </script>
+</body>
+</html>
